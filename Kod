@@ -1,0 +1,342 @@
+import time
+from tkinter import *
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+import random
+import datetime as dt
+import sys
+import matplotlib.animation as animation
+from PIL import Image, ImageTk
+#from drawnow import *
+import RPi.GPIO as GPIO
+from threading import Thread
+import time
+import board
+import busio
+import smbus
+import multiprocessing as mp
+
+# Main GUI frame
+
+root = Tk()
+root.title('SENSE Control and Monitor')
+root.geometry("699x570")
+root.resizable(False, False)
+
+
+#Define image
+image = Image.open("images/hh.png")
+resized_image = image.resize((363, 590))
+photo = ImageTk.PhotoImage(resized_image)
+label = Label(root, image = photo)
+label.image = photo
+label.place(x=335, y=0)
+
+plt.style.use('classic')
+# Empty lists for storage
+count = 0
+
+#Used for voltage measurement 1
+def adc_1():
+    
+    
+    bus = smbus.SMBus(1)
+        
+        #Analog pin 0
+    data = [0x42, 0xE3] #Set all the necessary bits (see datasheet page 28-29)
+    bus.write_i2c_block_data(0x48, 0x01, data) #ADC i2c adress, register select (config register)
+    #time.sleep(0.001)
+        
+    data= bus.read_i2c_block_data(0x48, 0x00, 2) #Read back data from the conversion register
+        
+    raw_adc = data[0] * 256 + data[1]
+    print("RAW ADC: " + str(raw_adc))
+        
+    return raw_adc
+#Used for voltage measurement 2
+def adc_2():
+    
+    bus = smbus.SMBus(1)
+    
+    #Analog pin 1
+    data = [0x52,0xE3] #Set all the necessary bits (see datasheet page 28-29)
+    bus.write_i2c_block_data(0x48, 0x01, data) #ADC i2c adress, register select (config register)
+    time.sleep(0.0011)
+    
+    data= bus.read_i2c_block_data(0x48, 0x00, 2) #Read back data from the conversion register
+    
+    raw_adc = data[0] * 256 + data[1]
+    
+    return raw_adc
+
+#Used by current sensor 3
+def adc_3():
+    
+    bus = smbus.SMBus(1)
+    
+    #Analog pin 2
+    data = [0x62, 0xE3] #Set all the necessary bits (see datasheet page 28-29)
+    bus.write_i2c_block_data(0x48, 0x01, data) #ADC i2c adress, register select (config register)
+    
+    data= bus.read_i2c_block_data(0x48, 0x00, 2) #Read back data from the conversion register
+    
+    raw_adc = data[0] * 256 + data[1]
+    
+    return raw_adc
+#Used to do voltage measurement 1
+def adc_4():
+    
+    bus = smbus.SMBus(1)
+    
+    #Analog pin 3
+    data = [0x72, 0xE3] #Set all the necessary bits (see datasheet page 28-29)
+    bus.write_i2c_block_data(0x48, 0x01, data) #ADC i2c adress, register select (config register)
+    time.sleep(0.001)
+    
+    data= bus.read_i2c_block_data(0x48, 0x00, 2) #Read back data from the conversion register
+    
+    raw_adc = data[0] * 256 + data[1]
+    
+    return raw_adc
+
+#used to do voltage measurement 2
+
+def adc_5():
+        
+    bus2 = smbus.SMBus(1)
+        
+    data2 = [0x42, 0xE3]
+    bus2.write_i2c_block_data(0x49, 0x01, data2)
+    time.sleep(0.5)
+        
+    data2 = bus2.read_i2c_block_data(0x49, 0x00, 2)
+        
+    raw_adc2 = data2[0] * 256 + data2[1]
+    
+        
+    print("Digital Value of Analog Input on channel 0: %d" %raw_adc2)
+    
+    return raw_adc2
+    
+def voltage_converter(raw_in):
+    
+    resolution = 4.096/32767
+    voltage = []
+    counter = 0
+    
+    while True:
+        
+        if counter < 100:
+            adcvalue = adc_1()
+            voltage.append(resolution*adcvalue)
+            time.sleep(0.00001)
+            counter = counter + 1
+            #print("counter = " + str(counter) + " || voltage = " + str(resolution*adcvalue) + " V has been appended")
+            #print('---' * 50)
+            #print("Voltage: " + str(voltage) + " V || ADC: " + str(raw_in))
+            #print("-> " + str(voltage) + " V")
+            #print(str(adcvalue))
+        
+        if(resolution*adcvalue > 3.9):
+            print("Overload: " + str(voltage) + " V")
+            time.sleep(0.2)
+            
+        if counter == 100:
+            
+            print("List has been sent! Current counter value: " + str(counter))
+            print(voltage)
+            counter = 0
+            return voltage
+  
+    #print('-' *50)
+    
+    #return voltage
+    
+
+
+
+def openSensor_1():
+    
+    plt.ion()
+    fig = plt.figure(figsize=(20,5), dpi=80)
+    ax = fig.add_subplot(1,1,1)
+    lista = []
+    current = []
+    counter = 0
+    #p2 = Thread(target=voltage_converter(adc_1()))
+    #p2.start()
+    while counter < 7:
+        lista.append(voltage_converter(adc_1()))
+        for i in range(len(lista)):
+            plt.plot(lista[i])
+            xcorr = [0, 100]
+            ycorr = [1.5, 1.5]
+            plt.plot(xcorr, ycorr)
+            plt.show(block=False)
+            plt.pause(1)
+            plt.clf()
+            counter = counter + 1
+            time.sleep(1)
+        lista.clear()
+        current.clear()
+    plt.clf()
+    plt.close('all')
+    
+
+        
+def openSensor_2():
+
+    fig2 = plt.figure()
+    ax2 = fig2.add_subplot(1,1,1)
+
+    i = 0
+    xs2 = []
+    ys2 = []
+    current = []
+
+    def animate2(i, xs2, ys2, current):
+
+        ys2.append(voltage_converter(adc_2()))
+        current.append(calculations(voltage_converter(adc_2())))
+        xs2.append(dt.datetime.now().strftime('%H:%M:%S'))
+
+        xs2 = xs2[-20:]
+        ys2 = ys2[-20:]
+        current = current[-20:]
+
+        ax2.clear()
+        ax2.plot(xs2, ys2, current)
+
+        ax2.title.set_text('Sensor 2')
+        ax2.set_ylabel('Current (mA)')
+        ax2.set_ylim([-5, 5])
+        ax2.axhline(y=0, color='k', linestyle='-')
+
+
+
+    ani2 = animation.FuncAnimation(fig2, animate2, fargs=(xs2, ys2, current), interval=500)
+    plt.show()
+
+def openSensor_3():
+
+    fig3 = plt.figure()
+    ax3 = fig3.add_subplot(1, 1, 1)
+
+    i = 0
+    xs3 = []
+    ys3 = []
+    current = []
+
+    def animate3(i, xs3, ys3, current):
+        ys3.append(voltage_converter(adc_5()))
+        current.append(calculations(voltage_converter(adc_5())))
+        xs3.append(dt.datetime.now().strftime('%H:%M:%S'))
+
+        xs = xs3[-20:]
+        ys = ys3[-20:]
+        current = current[-20:]
+
+        ax3.clear()
+        ax3.plot(xs, ys, current)
+
+        ax3.title.set_text('Sensor 3')
+        ax3.set_ylabel('Current (mA)')
+        ax3.set_ylim([-10, 10])
+        ax3.axhline(y=0, color='k', linestyle='-')
+
+
+    ani3 = animation.FuncAnimation(fig3, animate3, fargs=(xs3, ys3, current), interval=1000)
+    plt.show()
+    
+
+def info_box():
+    
+    plt.close('all')
+
+def instructions():
+    string_of_instructions = []
+    instruction_window = Toplevel()
+    instruction_window.title('SENSE - Instructions')
+    instruction_window.geometry('600x250')
+    Label(instruction_window, text=string_of_instructions).pack(pady=30)
+
+
+def choose_load():
+    load_window = Toplevel()
+    load_window.title('Load')
+    load_window.resizable(False, False)
+
+    Button_Load_Res = Button(load_window, text="Resistive Load", padx=185, pady=40, command=resistive_load)
+    Button_Load_Res.grid(row=1, column=0, sticky="nsew")
+    Button_Load_Cap = Button(load_window, text="Capacitive Load", padx=185, pady=40, command=capacitive_load)
+    Button_Load_Cap.grid(row=2, column=0, sticky="nsew")
+    Button_Load_Ind = Button(load_window, text="Inductive Load", padx=185, pady=40, command=inductive_load)
+    Button_Load_Ind.grid(row=3, column=0, sticky="nsew")
+
+def resistive_load():
+    
+    resistive_window = Toplevel()
+    resistive_window.title('Resistive Load')
+    resistive_window.resizable(False, False)
+    resistive_window.geometry('200x200')
+    
+    Button_Abort_Res = Button(resistive_window, text="Close", padx=200, pady=100, command=turn_off).pack()
+    
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(17, GPIO.OUT)
+    GPIO.output(17, GPIO.HIGH)
+    
+def capacitive_load():
+    
+    capacitive_window = Toplevel()
+    capacitive_window.title('Capacitive Load')
+    capacitive_window.resizable(False, False)
+    capacitive_window.geometry('200x200')
+    
+    Button_Abort_Cap = Button(capacitive_window, text="Close", padx=200, pady=100, command=turn_off).pack()
+    
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(22, GPIO.OUT)
+    GPIO.output(22, GPIO.HIGH)
+
+def inductive_load():
+    
+    inductive_window = Toplevel()
+    inductive.title('Inductive Load')
+    inductive_window.resizable(False, False)
+    inductive_window.geometry('200x200')
+    
+    Button_Abort = Button(inductive_window, text="Close", padx=200, pady=100, command=turn_off).pack()
+    
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(27, GPIO.OUT)
+    GPIO.output(27, GPIO.HIGH)
+
+
+def turn_off():
+    
+    GPIO.cleanup()
+
+def quit():
+
+    GPIO.cleanup()
+    sys.exit()
+
+
+Button_Display_Sensor_1 = Button(root, text="Sensor 1", padx=100, pady=30, bd=1, command=openSensor_1)
+Button_Display_Sensor_1.grid(row=1, column=3, sticky="nsew")
+Button_Display_Sensor_2 = Button(root, text="Sensor 2", padx=100, pady=30, bd=1, command=openSensor_2)
+Button_Display_Sensor_2.grid(row=2, column=3, sticky="nsew")
+Button_Display_Sensor_3 = Button(root, text="Sensor 3", padx=100, pady=30, bd=1, command=openSensor_3)
+Button_Display_Sensor_3.grid(row=3, column=3, sticky="nsew")
+Button_Display_INFO = Button(root, text="Close all windows", padx=100, pady=30, bd=1, command=info_box)
+Button_Display_INFO.grid(row=6, column=3, sticky="nsew")
+Button_Instructions = Button(root, text='Instructions', padx=100, pady=30, bd=1, command=instructions)
+Button_Instructions.grid(row=5, column=3, sticky="nsew")
+Button_Load = Button(root, text='Choose RLC load [TEMP]', padx=100, pady=30, bd=1, command=choose_load)
+Button_Load.grid(row=4, column=3, sticky="nsew")
+Button_Quit = Button(root, text='Quit program', padx=100, pady=30, bd=1, command=quit)
+Button_Quit.grid(row=7, column=3, sticky="nsew")
+
+root.mainloop()
