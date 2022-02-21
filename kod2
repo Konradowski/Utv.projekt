@@ -1,0 +1,290 @@
+import tkinter
+from tkinter import *
+from random import randint
+#import board
+#import busio
+#import smbus
+# these two imports are important
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import time
+import threading
+#import RPi.GPIO as GPIO
+import random
+import tkinter.font as font
+from PIL import Image, ImageTk
+
+
+continuePlotting = False
+resistiveLoad = False
+inductiveLoad = False
+capacitiveLoad = False
+clicked = False
+
+def change_state():
+    global continuePlotting
+    if continuePlotting == True:
+        continuePlotting = False
+    else:
+        continuePlotting = True
+
+#def resistive_load():
+#    global resistiveLoad
+#    if resistiveLoad == True:
+#        GPIO.setmode(GPIO.BCM)
+#        GPIO.setup(17, GPIO.OUT)
+#        GPIO.output(17, GPIO.LOW)
+#        resistiveLoad = False
+#    else:
+#        GPIO.setmode(GPIO.BCM)
+#        GPIO.setup(17, GPIO.OUT)
+#        GPIO.output(17, GPIO.HIGH)
+#        resistiveLoad = True
+
+
+#def inductive_load():
+#    global inductiveLoad
+#    if inductiveLoad == True:
+#        GPIO.setmode(GPIO.BCM)
+#        GPIO.setup(27, GPIO.OUT)
+#        GPIO.output(27, GPIO.LOW)
+#        inductiveLoad = False
+#    else:
+#        GPIO.setmode(GPIO.BCM)
+#        GPIO.setup(27, GPIO.OUT)
+#        GPIO.output(27, GPIO.HIGH)
+#        inductiveLoad = True
+
+
+#def capacitive_load():
+#    global capacitiveLoad
+#    if capacitiveLoad == True:
+#        GPIO.setmode(GPIO.BCM)
+#        GPIO.setup(22, GPIO.OUT)
+#        GPIO.output(22, GPIO.HIGH)
+#        capacitiveLoad = False
+#    else:
+#        GPIO.setmode(GPIO.BCM)
+#        GPIO.setup(22, GPIO.OUT)
+#        GPIO.output(22, GPIO.HIGH)
+#        capacitiveLoad = True
+
+
+#def adc_1():
+#    bus = smbus.SMBus(1)
+#
+#    # Analog pin 0
+#    data = [0x42, 0xE3]  # Set all the necessary bits (see datasheet page 28-29)
+#    bus.write_i2c_block_data(0x48, 0x01, data)  # ADC i2c adress, register select (config register)
+#    # time.sleep(0.001)
+
+#    data = bus.read_i2c_block_data(0x48, 0x00, 2)  # Read back data from the conversion register
+
+#    raw_adc = data[0] * 256 + data[1]
+    # print("RAW ADC: " + str(raw_adc))
+
+#    return raw_adc
+
+
+#def adc_2():
+#    bus = smbus.SMBus(1)
+
+#    # Analog pin 1
+#    data = [0x52, 0xE3]  # Set all the necessary bits (see datasheet page 28-29)
+#    bus.write_i2c_block_data(0x48, 0x01, data)  # ADC i2c adress, register select (config register)
+#    time.sleep(0.0011)
+#
+#    data = bus.read_i2c_block_data(0x48, 0x00, 2)  # Read back data from the conversion register
+#
+#    raw_adc = data[0] * 256 + data[1]
+#
+#    return raw_adc
+
+
+#def adc_3():
+#    bus = smbus.SMBus(1)
+#
+#    # Analog pin 2
+#    data = [0x62, 0xE3]  # Set all the necessary bits (see datasheet page 28-29)
+#    bus.write_i2c_block_data(0x48, 0x01, data)  # ADC i2c adress, register select (config register)
+#
+#    data = bus.read_i2c_block_data(0x48, 0x00, 2)  # Read back data from the conversion register
+#
+#    raw_adc = data[0] * 256 + data[1]
+#
+#    return raw_adc
+
+
+def data_points_ADC1():
+    voltage = []
+    for i in range(0, 100):
+        voltage.append(voltage_converter(random.randint(0,65536)))
+
+    return voltage
+
+
+def data_points_ADC2():
+    voltage = []
+    for i in range(0, 100):
+        voltage.append(voltage_converter(random.randint(0, 65536)))
+
+    return voltage
+
+
+def data_points_ADC3():
+    voltage = []
+    for i in range(0, 100):
+        voltage.append(voltage_converter(random.randint(0, 65536)))
+    return voltage
+
+def data_points_current():
+    current = []
+    for i in range(0, 100):
+        current.append(voltage_converter(random.randint(0, 62222)))
+    return current
+
+def voltage_converter(data):
+    resolution = 4.096 / 32767
+    adcvalue = data
+    voltage = resolution * adcvalue
+    return voltage
+
+def resistive_load():
+    print("Hello World")
+
+def inductive_load():
+    print("Hello World")
+
+def capacitive_load():
+    print("Hello World")
+
+def app():
+    # initialise a window.
+    root = Tk()
+
+    gui_font = font.Font(family='Arial', size=13)
+    root.config(background='white')
+    root.geometry("890x975")
+    root.resizable(False, False)
+    root.title("SENSE - Control and Monitor")
+
+    fig = Figure(figsize=(9, 2))
+    fig2 = Figure(figsize=(9, 2))
+    fig3 = Figure(figsize=(9, 2))
+
+    ax = fig.add_subplot(111)
+    ax.grid()
+    ax.set_ylim([0, 4])
+    ax.title.set_text('Sensor 1')
+
+
+    ax2 = fig2.add_subplot(111)
+    ax2.grid()
+    ax2.set_ylim([0, 4])
+    ax2.title.set_text('Sensor 2')
+
+
+    ax3 = fig3.add_subplot(111)
+    ax3.grid()
+    ax3.set_ylim([0, 4])
+    ax3.title.set_text('Sensor 3')
+
+    graph = FigureCanvasTkAgg(fig, master=root)
+    graph.get_tk_widget().grid(row=2, column=2)
+
+    graph2 = FigureCanvasTkAgg(fig2, master=root)
+    graph2.get_tk_widget().grid(row=3, column=2)
+
+    graph3 = FigureCanvasTkAgg(fig3, master=root)
+    graph3.get_tk_widget().grid(row=4, column=2)
+
+    def plotter():
+        while continuePlotting:
+            ax.cla()
+            ax.grid()
+            ax2.cla()
+            ax2.grid()
+            ax3.cla()
+            ax3.grid()
+
+            dpts = data_points_ADC1()
+            dpts2 = data_points_ADC2()
+            dpts3 = data_points_ADC3()
+            dptsAC = data_points_current()
+
+            ax.plot(dpts)
+            ax.title.set_text('Sensor 1')
+            ax2.plot(dpts)
+            ax2.title.set_text('Sensor 2')
+            ax3.plot(dpts)
+            ax3.plot(dptsAC)
+            ax3.title.set_text('Sensor 3')
+
+            graph.draw()
+            graph2.draw()
+            graph3.draw()
+            time.sleep(1)
+
+    def gui_handler():
+        change_state()
+        threading.Thread(target=plotter).start()
+
+
+    def instructions():
+        f = open("inst", "r", encoding="UTF8").read()
+
+        instruction_window = Toplevel()
+        instruction_window.title('Instructions')
+        instruction_window.geometry("710x920")
+        instruction_window.resizable(False, False)
+        Label(instruction_window, text=f, font=("Aria", 15), background="white").grid(sticky="NW")
+
+        schematics_btn = Button(instruction_window, text="Open schematics", padx=100, pady=30, command=schematics_menu)
+        schematics_btn.grid(sticky="S")
+
+    def schematics_menu():
+        schematics_menu = Toplevel()
+        schematics_menu.title('Schematics')
+        schematics_menu.geometry("710x920")
+        schematics_menu.resizable(False, False)
+
+        b = Button(schematics_menu, text="Sensor System", padx=200, pady=20, width=10, command=sensorSystemSchematics)
+        b.grid(sticky="N")
+
+    def sensorSystemSchematics():
+        SensorSystem = Toplevel()
+        SensorSystem.title('Schematics')
+        SensorSystem.geometry("710x920")
+        SensorSystem.resizable(False, False)
+        image = Image.open("elschema.JPG")
+        photo = ImageTk.PhotoImage(image)
+        label_image = Label(SensorSystem, image=photo)
+        label_image.grid(sticky="N")
+
+
+
+    b = Button(root, text="Start/Pause Sensor", padx=200, pady=20, width=10, command=gui_handler)
+    b.grid(row=5, column=2)
+    c = Button(root, text="Resistive load", padx=200, pady=20, width=10, command=resistive_load)
+    c.grid(row=6, column=2)
+    d = Button(root, text="Inductive load start/stop", padx=200, pady=20, width=10, command=inductive_load)
+    d.grid(rows=7, column=2)
+    e = Button(root, text="Capacitive load start/stop", padx=200, pady=20, width=10, command=capacitive_load)
+    e.grid(rows=8, column=2)
+    f = Button(root, text="How to use", padx=200, pady=20, width=10, command=instructions)
+    f.grid(rows=9, column=2)
+
+    #Set font
+    b['font'] = gui_font
+    c['font'] = gui_font
+    d['font'] = gui_font
+    e['font'] = gui_font
+    f['font'] = gui_font
+
+
+
+    root.mainloop()
+
+#Runner
+if __name__ == '__main__':
+    app()
