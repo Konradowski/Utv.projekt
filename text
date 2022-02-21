@@ -1,0 +1,35 @@
+
+---------------------------General Description--------------------------------
+There is a total of five sensors connected to the raspberry pi, this
+includes two current sensors (ACS712) for current measurement and
+two ADCs (Analog-Digital Converter, ADS1115).
+Both current sensors is connected to the ADC via a specific pins, see
+schematics below.
+
+In order to measure the voltage a single wire is connected between the
+ADC and a specific location on the physical circuitboard on the
+demonstrator, there is a total of two pins dedicated for voltage
+measurements.
+
+Too see the schematics, press the button below!
+------------------------------How to use---------------------------------------
+[Start/Pause Sensor]: Start the current and voltage measurements or
+pause the current and voltage measurements.
+
+[Resistive load start/stop]: Send a control signal to the Resistive load on
+the demonstrator, press again to turn off.
+
+[Inductive load start/stop]: Send a control signal to the Inductive load on
+the demonstrator, press again to turn off.
+
+[Capacitive load start/stop]: Send a control signal to the Capacitive load
+on the demonstrator, press again to turn off.
+
+--------------------------Project Description-----------------------------------
+This project is a part of the course Utvecklingsprojekt at Halmstad University.
+The goal of the project is to simulate the swedish power grid in a small scale,
+and show how different components in the systems works together. This project
+will try to provive understanding in how the swedish powersystem works.
+This demonstrator could also we used in educational purposes by teachers
+and students.
+-----------------------------------------------------------------------------
