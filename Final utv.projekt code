@@ -1,0 +1,403 @@
+from tkinter import *
+import board
+import busio
+import smbus
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import time
+import threading
+import RPi.GPIO as GPIO
+import tkinter.font as font
+from PIL import Image, ImageTk
+import sys
+import smbus
+import board
+import busio
+
+continuePlotting = False
+resistiveLoad = False
+inductiveLoad = False
+capacitiveLoad = False
+clicked = False
+
+def change_state():
+    global continuePlotting
+    if continuePlotting == True:
+        continuePlotting = False
+    else:
+        continuePlotting = True
+
+
+def resistive_load():
+   global resistiveLoad
+   if resistiveLoad == True:
+       GPIO.setmode(GPIO.BCM)
+       GPIO.setup(17, GPIO.OUT)
+       GPIO.output(17, GPIO.LOW)
+       resistiveLoad = False
+       
+   else:
+       GPIO.setmode(GPIO.BCM)
+       GPIO.setup(17, GPIO.OUT)
+       GPIO.output(17, GPIO.HIGH)
+       resistiveLoad = True
+
+def inductive_load():
+   global inductiveLoad
+   if inductiveLoad == True:
+       GPIO.setmode(GPIO.BCM)
+       GPIO.setup(27, GPIO.OUT)
+       GPIO.output(27, GPIO.LOW)
+       inductiveLoad = False
+   else:
+       GPIO.setmode(GPIO.BCM)
+       GPIO.setup(27, GPIO.OUT)
+       GPIO.output(27, GPIO.HIGH)
+       inductiveLoad = True
+
+
+def capacitive_load():
+   global capacitiveLoad
+   if capacitiveLoad == True:
+       GPIO.setmode(GPIO.BCM)
+       GPIO.setup(22, GPIO.OUT)
+       GPIO.output(22, GPIO.LOW)
+       capacitiveLoad = False
+       
+   else:
+       GPIO.setmode(GPIO.BCM)
+       GPIO.setup(22, GPIO.OUT)
+       GPIO.output(22, GPIO.HIGH)
+       capacitiveLoad = True
+       
+def adc_1():
+   bus = smbus.SMBus(1)
+#
+   # Analog pin 0
+   data = [0x42, 0xE3]  # Set all the necessary bits (see datasheet page 28-29)
+   bus.write_i2c_block_data(0x48, 0x01, data)  # ADC i2c adress, register select (config register)
+   # time.sleep(0.001)
+
+   data = bus.read_i2c_block_data(0x48, 0x00, 2)  # Read back data from the conversion register
+
+   raw_adc = data[0] * 256 + data[1]
+
+   return raw_adc
+
+
+def adc_2():
+   bus = smbus.SMBus(1)
+    
+   # Analog pin 1
+   data2 = [0x52, 0xE3]  # Set all the necessary bits (see datasheet page 28-29)
+   bus.write_i2c_block_data(0x48, 0x01, data2)  # ADC i2c adress, register select (config register)
+#
+   data2 = bus.read_i2c_block_data(0x48, 0x00, 2)  # Read back data from the conversion register
+#
+   raw_adc2 = data2[0] * 256 + data2[1]
+   return raw_adc2
+
+
+def adc_3():
+   bus = smbus.SMBus(1)
+#
+   # Analog pin 2
+   data3 = [0x62, 0xE3]  # Set all the necessary bits (see datasheet page 28-29)
+   bus.write_i2c_block_data(0x48, 0x01, data3)  # ADC i2c adress, register select (config register)
+#
+   data3 = bus.read_i2c_block_data(0x48, 0x00, 2)  # Read back data from the conversion register
+#
+   raw_adc3 = data3[0] * 256 + data3[1]
+#
+   return raw_adc3
+
+#Used for voltage measurements
+def adc_4():
+    
+    bus = smbus.SMBus(1)
+    
+    #Analog pin 3
+    data = [0x72, 0xE3] #Set all the necessary bits (see datasheet page 28-29)
+    bus.write_i2c_block_data(0x48, 0x01, data) #ADC i2c adress, register select (config register)
+    
+    data= bus.read_i2c_block_data(0x48, 0x00, 2) #Read back data from the conversion register
+    
+    raw_adc = data[0] * 256 + data[1]
+    
+    return raw_adc
+
+#Used for voltage measurements
+def adc_5():
+        
+    bus2 = smbus.SMBus(1)
+        
+    data2 = [0x42, 0xE3]
+    bus2.write_i2c_block_data(0x49, 0x01, data2)
+        
+    data2 = bus2.read_i2c_block_data(0x49, 0x00, 2)
+        
+    raw_adc2 = data2[0] * 256 + data2[1]
+    
+    #print("Digital Value of Analog Input on channel 0: %d" %raw_adc2)
+    
+    return raw_adc2
+
+
+def voltage_converter(data):
+    resolution = 4.096 / 32767
+    adcvalue = data
+    voltage = resolution * adcvalue
+    
+    return voltage
+        
+
+#def data_points_ADC4():
+#    voltage = []
+#    for i in range(0, 302):
+#        voltage.append(voltage_converter(adc_3()) * 17 - 21)
+#    voltage.pop(0)
+#    voltage.pop(0)
+#    return voltage
+
+#def data_points_ADC5():
+#    voltage = []
+#    for i in range(0, 302):
+#        voltage.append(voltage_converter(adc_5()) * 17 - 21)
+#    voltage.pop(0)
+#   voltage.pop(0)
+#    return voltage
+
+#Plot 1, voltage and current
+def data_points_AC1():
+    
+    current_list = []
+    voltage_list = []
+    for i in range(0, 202):
+        resolution = 4.096 / 32767
+        adcvalue = adc_1()
+        voltage = resolution * adcvalue
+        current = ((voltage - 2.43)/0.185)
+        #print(str(adcvalue) + " give voltage of " + str(voltage) + " current " + str(current))
+        current_list.append(current)
+        voltage_list.append(voltage_converter(adc_5()) * 17 - 21)
+        time.sleep(0.002)
+        
+    current_list.pop(0)
+    current_list.pop(0)
+    voltage_list.pop(0)
+    voltage_list.pop(0)
+    
+    return current_list, voltage_list
+#plot 2
+def data_points_AC2():
+    
+    current_list2 = []
+    voltage_list2 = []
+    for i in range(0, 202):
+        resolution = 4.096 / 32767
+        adcvalue = adc_2()
+        voltage = resolution * adcvalue
+        current = ((voltage - 2.43)/0.185)
+        current_list2.append(current)
+        voltage_list2.append(voltage_converter(adc_3()) * 17 - 21)
+        print(adc_3())
+        time.sleep(0.002)
+    
+    print(voltage_list2)
+    print("--"*90)
+    
+    current_list2.pop(0)
+    current_list2.pop(0)
+    voltage_list2.pop(0)
+    voltage_list2.pop(0)
+    
+    return current_list2, voltage_list2
+
+#plot 3
+#def data_points_AC3():
+    
+#    current_list = []
+#    for i in range(0, 302):
+#        resolution = 4.096 / 32767
+#        adcvalue = adc_3()
+#        voltage = resolution * adcvalue
+#        current = ((voltage - 2.43)/0.185)
+#        current_list.append(current)
+#    current_list.pop(0)
+#    current_list.pop(0)
+#    return current_list
+
+#Dummy function used to disable the [X] button,
+def disable_event():
+    
+    GPIO.cleanup()
+    time.sleep(0.2)
+    sys.exit()
+
+def app():
+    # initialise a window.
+    
+    root = Tk()
+    root.protocol("WM_DELETE_WINDOW", disable_event)
+    gui_font = font.Font(family='Arial', size=15)
+    root.config(background='white')
+    root.geometry("1290x1050")
+    root.resizable(False, False)
+    root.title("SENSE - Control and Monitor")
+    
+    status_res = Label(root, text="Resistive Load is INACTIVE", font=("Arial", 17), bg="white")
+    status_res.grid(row=5, column=2)
+    status_ind = Label(root, text="Inductive Load is INACTIVE", font=("Arial", 17), bg="white")
+    status_ind.grid(row=6, column=2)
+    status_cap = Label(root, text="Capacitive Load is INACTIVE", font=("Arial", 17), bg="white")
+    status_cap.grid(row=7, column=2)
+    
+
+    fig = Figure(figsize=(13, 3))
+    fig2 = Figure(figsize=(13, 3))
+    #fig3 = Figure(figsize=(9, 2))
+    
+    ax = fig.add_subplot(111)
+    ax.grid()
+    ax.title.set_text('Sensor 1')
+    
+    ax2 = fig2.add_subplot(111)
+    ax2.grid()
+    #ax2.set_ylim([0, 4])
+    ax2.title.set_text('Sensor 2')
+
+
+    #ax3 = fig3.add_subplot(111)
+    #ax3.grid()
+    #ax3.set_ylim([0, 4])
+    #ax3.title.set_text('Sensor 3')
+    
+    ax.set_ylabel("Voltage [V]")
+    ax2.set_ylabel("Voltage [V]")
+    #ax3.set_ylabel("Voltage [V]")
+    
+    ax_current = ax.twinx()
+    ax_current.set_ylabel("current")
+    ax2_current = ax2.twinx()
+    ax2_current.set_ylabel("current")
+    #ax3_current = ax3.twinx()
+    #ax3_current.set_ylabel("current [mA]")
+
+
+    graph = FigureCanvasTkAgg(fig, master=root)
+    graph.get_tk_widget().grid(row=1, column=2)
+
+    graph2 = FigureCanvasTkAgg(fig2, master=root)
+    graph2.get_tk_widget().grid(row=2, column=2)
+
+    #graph3 = FigureCanvasTkAgg(fig3, master=root)
+    #graph3.get_tk_widget().grid(row=3, column=2)
+    
+    
+            
+    def plotter():
+        while continuePlotting:
+            ax.cla()
+            ax.grid()
+            ax2.cla()
+            ax2.grid()
+            #ax3.cla()
+            #ax3.grid()
+            ax_current.cla()
+            ax2_current.cla()
+            #ax3_current.cla()
+            
+            #ax.set_ylim([-3.5, 3.5])
+            #ax2.set_ylim([-3.5, 3.5])
+            #ax3.set_ylim([-3.5,3.5])
+            #ax_current.set_ylim([-0.5, 0.2])
+            #ax2_current.set_ylim([-0.5,0.2])
+            #ax3_current.set_ylim([-2,2])
+            
+            ax.set_ylabel("Voltage [Vpp]")
+            ax2.set_ylabel("Voltage [Vpp]")
+            #ax3.set_ylabel("Voltage [V]")
+            
+            #Voltage datapoints
+            #dpts2 = data_points_ADC4() #adc_4
+            #dpts3 = data_points_ADC5() #adc_5
+            #Current datapoints
+            #dptsAC1 = data_points_AC1.current_list #adc_1
+            #dpts2 = data_points_AC1.voltage_list
+            #dptsAC2 = data_points_AC2() #adc_2
+            #dptsAC3 = data_points_AC3() #adc_3
+            
+            current_list, voltage_list = data_points_AC1()
+            current_list2, voltage_list2 = data_points_AC2()
+            
+            ax.title.set_text("Sensor 1")
+            ax.plot(voltage_list)
+            ax_current.plot(current_list, color='orange')
+            
+            ax2.title.set_text('Sensor 2')
+            ax2.plot(voltage_list2)
+            ax2_current.plot(current_list2, color='orange')
+            
+            #ax3.plot(dpts3)
+            #ax3_current.plot(dptsAC3, color='orange')
+            #ax3.title.set_text('Sensor 3')
+
+            graph.draw()
+            graph2.draw()
+            #graph3.draw()
+            
+    
+            if resistiveLoad == True:
+                status_res.config(text="Resistive Load is ACTIVE", bg="#09FF00")
+            elif resistiveLoad == False:
+                status_res.config(text="Resistive Load is INACTIVE", bg="white")
+            if inductiveLoad == True:
+                status_ind.config(text="Inductive Load is ACTIVE", bg="#09FF00")
+            elif inductiveLoad == False:
+                status_ind.config(text="Inductive Load is INACTIVE", bg="white")
+            if capacitiveLoad == True:
+                status_cap.config(text="Capacitive Load is ACTIVE", bg="#09FF00")
+            elif capacitiveLoad == False:
+                status_cap.config(text="Capacitive Load is INACTIVE", bg="white")    
+      
+    def gui_handler():
+        change_state()
+        threading.Thread(target=plotter).start()
+        
+
+    def instructions():
+        f = open("txt.txt", "r", encoding="UTF8").read()
+
+        instruction_window = Toplevel()
+        instruction_window.title('Instructions')
+        instruction_window.geometry("815x905")
+        instruction_window.resizable(False, False)
+        Label(instruction_window, text=f, font=("Aria", 15), background="white").grid(sticky="NW")
+        
+    
+    b = Button(root, text="Start/Pause Sensor", padx=200, pady=15, width=20, bg="white", command=gui_handler)
+    b.grid(row=9, column=2)
+    c = Button(root, text="Resistive load ACTIVE/INACTIVE", padx=200, pady=15, width=20, bg="white", command=resistive_load)
+    c.grid(row=10, column=2)
+    d = Button(root, text="Inductive load ACTIVE/INACTIVE", padx=200, pady=15, width=20, bg="white", command=inductive_load)
+    d.grid(row=11, column=2)
+    e = Button(root, text="Capacitive load ACTIVE/INACTIVE", padx=200, pady=15, width=20, bg="white", command=capacitive_load)
+    e.grid(row=12, column=2)
+    f = Button(root, text="How to use", padx=200, pady=15, width=20, bg="white", command=instructions)
+    f.grid(row=13, column=2)
+    info_label = Label(root, text="Press Start/Pause Sensor before you activate any load. It has to be active in order to have working indicators!", font=("Arial", 10))
+    info_label.grid(row=14, column=2)
+    
+
+    #Set font
+    b['font'] = gui_font
+    c['font'] = gui_font
+    d['font'] = gui_font
+    e['font'] = gui_font
+    f['font'] = gui_font
+
+    root.mainloop()
+
+#Runner
+if __name__ == '__main__':
+    app()
